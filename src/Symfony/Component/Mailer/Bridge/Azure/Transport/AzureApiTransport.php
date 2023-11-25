@@ -27,18 +27,21 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 final class AzureApiTransport extends AbstractApiTransport {
-	
+
 	private string $endpoint;
 	private string $version;
 	private string $key;
 
 	private const QUERY_PATH_TEMPLATE = '/emails:send?api-version=%s';
-	private const REQUEST_STRING_TEMPLATE = '%s\n%s\n%s;%s;%s';
-	// private const AUTH_TEMPLATE = 'HMAC-SHA256 SignedHeaders=%s;%s;%s&Signature=%s';
+	private const REQUEST_STRING_TEMPLATE = "%s\n%s\n%s;%s;%s";
 	private const AUTH_TEMPLATE = 'HMAC-SHA256 SignedHeaders=x-ms-date;host;x-ms-content-sha256&Signature=%s';
 
-	public function __construct(AzureApiTransportArgs $args, HttpClientInterface $client = null,
-			EventDispatcherInterface $dispatcher = null, LoggerInterface $logger = null) {
+	public function __construct(
+		AzureApiTransportArgs $args,
+		HttpClientInterface $client = null,
+		EventDispatcherInterface $dispatcher = null,
+		LoggerInterface $logger = null
+	) {
 		$this->endpoint = $args->getEndpoint();
 		$this->key = $args->getKey();
 		$this->version = $args->getVersion();
@@ -66,11 +69,11 @@ final class AzureApiTransport extends AbstractApiTransport {
 
 		if ($status !== 202) {
 			try {
-                $result = $response->toArray(false);
-                throw new HttpTransportException('Unable to send an email (' . $result['error']['code'] . '): ' . $result['error']['message'], $response, $status);
-            } catch (DecodingExceptionInterface $e) {
-                throw new HttpTransportException('Unable to send an email: '.$response->getContent(false).sprintf(' (code %d).', $status), $response, 0, $e);
-            }
+				$result = $response->toArray(false);
+				throw new HttpTransportException('Unable to send an email (' . $result['error']['code'] . '): ' . $result['error']['message'], $response, $status);
+			} catch (DecodingExceptionInterface $e) {
+				throw new HttpTransportException('Unable to send an email: ' . $response->getContent(false) . sprintf(' (code %d).', $status), $response, 0, $e);
+			}
 		}
 
 		$sentMessage->setMessageId(\json_decode($response->getContent(false), true)['id']);
@@ -79,12 +82,12 @@ final class AzureApiTransport extends AbstractApiTransport {
 	}
 
 	private function constructPayload(Email $email, Envelope $envelope): array {
-		$stringifyAddress = function(Address $address) {
+		$stringifyAddress = function (Address $address) {
 			$stringifiedAddress = ['address' => $address->getAddress()];
-	
+
 			if ($address->getName())
 				$stringifiedAddress['displayName'] = $address->getName();
-	
+
 			return $stringifiedAddress;
 		};
 
@@ -105,7 +108,6 @@ final class AzureApiTransport extends AbstractApiTransport {
 			'userEngagementTrackingDisabled' => true,
 		];
 
-		// dd($payload);
 		return $payload;
 	}
 
@@ -129,32 +131,22 @@ final class AzureApiTransport extends AbstractApiTransport {
 	}
 
 	private function constructHeaders(array $payload, Email $email): array {
-		$timestamp = (new \DateTime('now', new \DateTimeZone('UTC')))->format(\DateTimeInterface::RFC1123);
+		$timestamp = (new \DateTime('now', new \DateTimeZone('UTC')))->format(\DateTimeInterface::RFC7231);
 
 		$query = $this->constructQueryPath();
 		$host = \str_replace('https://', '', $this->endpoint);
 		$contentHash = $this->hashData(\json_encode($payload));
 
 		$signature = $this->constructSignature($query, $timestamp, $host, $contentHash);
-		// dd($signature);
-
-		$messageID = $this->generateMessageID();
 
 		$headers = [
 			'Content-Type' => 'application/json',
-			'Authorization' => $this->constructAuthHeader($timestamp, $host, $contentHash, $signature),
+			'Authorization' => $this->constructAuthHeader($signature),
 			'x-ms-date' => $timestamp,
 			'x-ms-content-sha256' => $contentHash,
-			'x-ms-client-request-id' => $messageID,
-			'Operation-Id' => $messageID,
 		];
 
 		return $headers;
-
-		// return [
-		// 	'headers' => $headers, 
-		// 	'id' => $messageID
-		// ];
 	}
 
 	private function constructSignature(string $query, string $timestamp, string $host, string $hash): string {
@@ -165,33 +157,11 @@ final class AzureApiTransport extends AbstractApiTransport {
 		return \base64_encode($hash);
 	}
 
-	private function constructAuthHeader(string $timestamp, string $host, string $hash, string $signature): string {
-		// return \sprintf($this::AUTH_TEMPLATE, $timestamp, $host, $hash, $signature);
+	private function constructAuthHeader(string $signature): string {
 		return \sprintf($this::AUTH_TEMPLATE, $signature);
 	}
-
-	private function generateMessageID(): string {
-		$data = \random_bytes(16);
-		\assert(\strlen($data) == 16); // what
-		$data[6] = \chr(\ord($data[6]) & 0x0f | 0x40);
-        $data[8] = \chr(\ord($data[8]) & 0x3f | 0x80);
-
-        // Output the 36 character UUID.
-        return \vsprintf('%s%s-%s-%s-%s-%s%s%s', \str_split(\bin2hex($data), 4));
-	}
-
-	// static function stringifyAddress(Address $address) {
-	// 	$stringifiedAddress = ['address' => $address->getAddress()];
-
-	// 	if ($address->getName())
-	// 		$stringifiedAddress['displayName'] = $address->getName();
-
-	// 	return $stringifiedAddress;
-	// }
 
 	public function __toString(): string {
 		return \sprintf('azure+api://%s', $this->endpoint);
 	}
 }
-
-

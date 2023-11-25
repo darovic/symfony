@@ -7,7 +7,7 @@ final class AzureApiTransportArgs {
 	private string $version;
 	private string $key;
 
-	private const DEFAULT_API_VERSION = '2021-10-01-preview';
+	private const DEFAULT_API_VERSION = '2023-03-31';
 
 	public function __construct(string $endpoint, string $key, string $version = null) {
 		$this->endpoint = $endpoint;
