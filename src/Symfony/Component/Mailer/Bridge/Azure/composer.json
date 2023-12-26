@@ -1,0 +1,42 @@
+{
+    "name": "symfony/azure-mailer",
+    "type": "symfony-mailer-bridge",
+    "description": "Symfony Azure Communication Services Mailer Bridge",
+    "keywords": [],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Damir Mitrovic",
+            "email": "damir@mitrovic.id.au"
+        },
+        {
+            "name": "Fabien Potencier",
+            "email": "fabien@symfony.com"
+        },
+        {
+            "name": "Symfony Community",
+            "homepage": "https://symfony.com/contributors"
+        }
+    ],
+    "require": {
+        "php": ">=8.2",
+        "symfony/mailer": "^6.3"
+    },
+    "require-dev": {
+        "symfony/http-client": "^6.3",
+        "symfony/webhook": "^6.3"
+    },
+    "conflict": {
+        "symfony/mime": "<6.2",
+        "symfony/http-foundation": "<6.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "Symfony\\Component\\Mailer\\Bridge\\Azure\\": ""
+        },
+        "exclude-from-classmap": [
+            "/Tests/"
+        ]
+    },
+    "minimum-stability": "dev"
+}
