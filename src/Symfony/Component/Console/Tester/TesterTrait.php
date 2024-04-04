@@ -16,6 +16,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Output\StreamOutput;
+use Symfony\Component\Console\Tester\Constraint\CommandFailed;
 use Symfony\Component\Console\Tester\Constraint\CommandIsSuccessful;
 
 /**
@@ -103,6 +104,12 @@ trait TesterTrait
     {
         Assert::assertThat($this->statusCode, new CommandIsSuccessful(), $message);
     }
+
+    public function assertCommandFailed(string $message = ''): void
+    {
+        Assert::assertThat($this->statusCode, new CommandFailed(), $message);
+    }
+
 
     /**
      * Sets the user inputs.
